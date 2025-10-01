@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Date Collection Calculator</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font and basic styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        /* Custom style for responsive select sizing */
+        .date-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 min-h-screen flex items-center justify-center">
+
+    <div id="app-container" class="w-full max-w-sm bg-white shadow-xl rounded-xl p-5 sm:p-6 transition-all duration-300">
+        <h1 class="text-2xl font-bold text-gray-800 mb-5 text-center">Collection Date Analyzer</h1>
+        
+        <!-- Input Section with Dropdowns -->
+        <div class="mb-6">
+            <label class="block text-xs font-medium text-gray-700 mb-1">Collection Start Date:</label>
+            <div class="flex space-x-2">
+                <!-- Day Dropdown -->
+                <select id="dayInput" class="date-select flex-1 p-2 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+                    <option value="">Day</option>
+                </select>
+                <!-- Month Dropdown -->
+                <select id="monthInput" class="date-select flex-1 p-2 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+                    <option value="">Month</option>
+                </select>
+                <!-- Year Dropdown -->
+                <select id="yearInput" class="date-select flex-1 p-2 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+                    <option value="">Year</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Results Section (Uses max-h-0 for smooth collapsing) -->
+        <div id="resultsContainer" class="space-y-3 max-h-0 opacity-0 transition-all duration-300 overflow-hidden">
+            
+            <h2 class="text-lg font-bold text-gray-800 border-b pb-2 mb-3">Calculated Cover Periods</h2>
+
+            <!-- 5 Years Result Card -->
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-lg shadow-sm">
+                <p class="text-xs font-medium text-gray-600 mb-1">Collection Cover Upto (5 Years):</p>
+                <p id="cover5Years" class="text-base font-bold text-blue-800">--</p>
+                <p class="text-xs font-medium text-gray-600 mt-2 mb-1">Total Days (5 Years):</p>
+                <p id="days5Years" class="text-base font-bold text-blue-800">1800</p>
+            </div>
+
+            <!-- 3 Years Result Card -->
+            <div class="bg-green-50 border-l-4 border-green-500 p-3 rounded-lg shadow-sm">
+                <p class="text-xs font-medium text-gray-600 mb-1">Collection Cover Upto (3 Years):</p>
+                <p id="cover3Years" class="text-base font-bold text-green-800">--</p>
+                <p class="text-xs font-medium text-gray-600 mt-2 mb-1">Total Days (3 Years):</p>
+                <p id="days3Years" class="text-base font-bold text-green-800">1080</p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex space-x-3 mt-6">
+            <button id="copyButton" 
+                    class="flex-1 py-2 px-3 text-sm bg-gray-500 text-white font-medium rounded-lg shadow-md hover:bg-gray-600 transition duration-150 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50"
+                    disabled>
+                Copy All Results
+            </button>
+            <button id="clearButton" 
+                    class="flex-1 py-2 px-3 text-sm bg-red-500 text-white font-medium rounded-lg shadow-md hover:bg-red-600 transition duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
+                    disabled>
+                Clear
+            </button>
+        </div>
+
+        <!-- Custom Alert/Message Box -->
+        <div id="messageBox" class="mt-3 p-2 bg-yellow-100 text-yellow-800 rounded-lg hidden text-xs font-medium transition-opacity duration-300 opacity-0"></div>
+
+    </div>
+
+    <script>
+        // DOM Element references
+        const dayInput = document.getElementById('dayInput');
+        const monthInput = document.getElementById('monthInput');
+        const yearInput = document.getElementById('yearInput');
+        
+        const resultsContainer = document.getElementById('resultsContainer');
+        const cover5YearsEl = document.getElementById('cover5Years');
+        const days5YearsEl = document.getElementById('days5Years');
+        const cover3YearsEl = document.getElementById('cover3Years');
+        const days3YearsEl = document.getElementById('days3Years');
+        const copyButton = document.getElementById('copyButton');
+        const clearButton = document.getElementById('clearButton');
+        const messageBox = document.getElementById('messageBox');
+
+        // --- Utility Functions ---
+
+        /**
+         * Shows a temporary message to the user (instead of alert()).
+         * @param {string} message - The message to display.
+         * @param {string} type - 'success' or 'error' for styling.
+         */
+        function showMessage(message, type = 'success') {
+            const baseClasses = 'mt-3 p-2 rounded-lg text-xs font-medium transition-opacity duration-300';
+            
+            messageBox.className = baseClasses + (type === 'success' 
+                ? ' bg-green-100 text-green-800' 
+                : ' bg-red-100 text-red-800');
+            
+            messageBox.textContent = message;
+            messageBox.classList.remove('hidden', 'opacity-0');
+            messageBox.classList.add('opacity-100');
+
+            setTimeout(() => {
+                messageBox.classList.remove('opacity-100');
+                messageBox.classList.add('opacity-0');
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 300);
+            }, 3000);
+        }
+
+        /**
+         * Formats a Date object into the 'DD Month YYYY' string (e.g., 01 Oct 2020).
+         * @param {Date} date - The Date object to format.
+         * @returns {string} The formatted date string.
+         */
+        function formatDate(date) {
+            const options = { day: '2-digit', month: 'short', year: 'numeric' };
+            const formatter = new Intl.DateTimeFormat('en-GB', options);
+            // Replace comma with space
+            return formatter.format(date).replace(/,/g, ''); 
+        }
+
+        // --- New Function: Populate Dropdowns ---
+        function populateDateDropdowns() {
+            // Populate Day (1-31)
+            for (let i = 1; i <= 31; i++) {
+                const option = document.createElement('option');
+                option.value = String(i).padStart(2, '0'); // '01', '02', ...
+                option.textContent = String(i).padStart(2, '0');
+                dayInput.appendChild(option);
+            }
+
+            // Populate Month (0-11 for Date object, but using 1-12 for value)
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            monthNames.forEach((name, index) => {
+                const option = document.createElement('option');
+                option.value = String(index + 1).padStart(2, '0'); // Value 01 to 12
+                option.textContent = name;
+                monthInput.appendChild(option);
+            });
+
+            // Populate Year (2035 down to 2000)
+            for (let i = 2035; i >= 2000; i--) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                yearInput.appendChild(option);
+            }
+        }
+
+        /**
+         * Checks if a date is fully selected.
+         * @returns {boolean} True if all three inputs have a selected value.
+         */
+        function isDateSelected() {
+            return dayInput.value !== "" && monthInput.value !== "" && yearInput.value !== "";
+        }
+
+        // --- Core Logic ---
+
+        /**
+         * Calculates the cover dates for 3 and 5 years.
+         */
+        function calculateDates() {
+            const day = parseInt(dayInput.value);
+            const monthIndex = parseInt(monthInput.value) - 1; // Month is 0-indexed (0=Jan, 11=Dec)
+            const year = parseInt(yearInput.value);
+            
+            let isValidSelection = isDateSelected();
+            let isValidDate = false;
+
+            if (isValidSelection) {
+                // Construct the date object
+                const inputDate = new Date(year, monthIndex, day);
+                
+                // Crucial Validation: Check if the constructed date matches the input 
+                isValidDate = inputDate.getFullYear() === year && 
+                              inputDate.getMonth() === monthIndex && 
+                              inputDate.getDate() === day;
+            }
+
+            if (!isValidSelection || !isValidDate) {
+                // Invalid or incomplete selection: Hide results
+                if (isValidSelection && !isValidDate) {
+                    showMessage('Selected date is invalid (e.g., 31st of a short month). Please check.', 'error');
+                }
+                
+                // Collapse the results container
+                resultsContainer.classList.add('opacity-0', 'max-h-0');
+                resultsContainer.classList.remove('max-h-screen');
+                copyButton.disabled = true;
+                clearButton.disabled = true;
+                return;
+            }
+
+            // --- Calculation for Valid Date ---
+            const startDate = new Date(year, monthIndex, day); // Use the validated date
+            
+            // Calculate 5-year end date
+            const end5Years = new Date(startDate);
+            end5Years.setFullYear(startDate.getFullYear() + 5);
+            end5Years.setDate(end5Years.getDate() - 1); // Subtract one day
+
+            // Calculate 3-year end date
+            const end3Years = new Date(startDate);
+            end3Years.setFullYear(startDate.getFullYear() + 3);
+            end3Years.setDate(end3Years.getDate() - 1); // Subtract one day
+
+            // Update DOM with results
+            cover5YearsEl.textContent = formatDate(end5Years);
+            days5YearsEl.textContent = '1800'; // Fixed as per user example
+            
+            cover3YearsEl.textContent = formatDate(end3Years);
+            days3YearsEl.textContent = '1080'; // Fixed as per user example
+
+            // Show results
+            resultsContainer.classList.remove('opacity-0', 'max-h-0');
+            resultsContainer.classList.add('max-h-screen'); // Expand the container
+            copyButton.disabled = false;
+            clearButton.disabled = false;
+        }
+
+        /**
+         * Handles the Copy button click.
+         */
+        function copyResults() {
+            if (!isDateSelected()) return;
+
+            const day = dayInput.value;
+            const month = monthInput.value;
+            const year = yearInput.value;
+            
+            // Re-create the start date for formatting in the output text
+            const startDate = new Date(year, parseInt(month) - 1, parseInt(day));
+            const displayStartDate = formatDate(startDate);
+
+            // Updated text format as requested by the user
+            const textToCopy = [
+                `--- Collection Summary ---`, 
+                `\nCollection Start Date:`, 
+                `${displayStartDate}`,      
+                `\n--- 5 Years Period ---`, 
+                `Collection Cover Upto (5 Years):`, 
+                `${cover5YearsEl.textContent}`,     
+                `Total Days:`, 
+                `${days5YearsEl.textContent}`,      
+                `\n--- 3 Years Period ---`, 
+                `Collection Cover Upto (3 Years):`, 
+                `${cover3YearsEl.textContent}`,     
+                `Total Days:`, 
+                `${days3YearsEl.textContent}`       
+            ].join('\n');
+
+            // Use temporary textarea for copying to clipboard
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                // document.execCommand('copy') is used for broader compatibility in sandboxed environments
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showMessage('Results copied to clipboard successfully!', 'success');
+                } else {
+                    showMessage('Could not copy results. Please try again.', 'error');
+                }
+            } catch (err) {
+                showMessage(`Copy failed: ${err.message}`, 'error');
+            } finally {
+                document.body.removeChild(tempTextArea);
+            }
+        }
+
+        /**
+         * Handles the Clear button click.
+         */
+        function clearAll() {
+            // Clear the input fields
+            dayInput.value = ''; 
+            monthInput.value = '';
+            yearInput.value = '';
+            
+            // Reset results display
+            cover5YearsEl.textContent = '--';
+            days5YearsEl.textContent = '1800'; 
+            cover3YearsEl.textContent = '--';
+            days3YearsEl.textContent = '1080'; 
+            
+            // Hide results container and disable buttons (Fix for the clear issue)
+            resultsContainer.classList.remove('max-h-screen');
+            resultsContainer.classList.add('opacity-0', 'max-h-0'); 
+            copyButton.disabled = true;
+            clearButton.disabled = true;
+            
+            showMessage('Calculator cleared.', 'error');
+        }
+
+
+        // --- Event Listeners ---
+        
+        // Listen for changes on all three dropdowns (real-time results)
+        dayInput.addEventListener('change', calculateDates);
+        monthInput.addEventListener('change', calculateDates);
+        yearInput.addEventListener('change', calculateDates);
+
+        // Listen for button clicks
+        copyButton.addEventListener('click', copyResults);
+        clearButton.addEventListener('click', clearAll);
+
+        // Initial setup: Populate dropdowns and calculate
+        populateDateDropdowns();
+        calculateDates(); 
+        
+    </script>
+</body>
+</html>
