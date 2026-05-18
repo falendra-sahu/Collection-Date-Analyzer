@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -98,6 +99,28 @@
             z-index: 1000;
             pointer-events: none;
         }
+
+        @media (max-width: 767px) {
+            body {
+                padding: 0 !important;
+                min-height: 100vh !important;
+                height: 100vh !important;
+                overflow: hidden !important;
+            }
+            .app-container {
+                max-width: 100% !important;
+                width: 100% !important;
+                height: 100vh !important;
+                border: none !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+            .app-container > .p-6 {
+                padding: 16px !important;
+            }
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-6">
@@ -131,7 +154,7 @@
                     <div class="result-box bg-blue-50/50 border-blue-100">
                         <div class="space-y-1">
                             <h3 class="text-sm font-bold text-blue-700">5 Years Period</h3>
-                            <p class="text-xs font-semibold text-blue-600/70 uppercase">1,800 Days</p>
+                            <p id="days5Years" class="text-xs font-semibold text-blue-600/70 uppercase">--</p>
                             <div class="pt-2 border-t border-blue-100 mt-2">
                                 <p class="text-[11px] text-gray-500 font-medium">Covers Upto:</p>
                                 <p id="cover5Years" class="text-lg font-bold text-blue-900">--</p>
@@ -142,7 +165,7 @@
                     <div class="result-box bg-green-50/50 border-green-100">
                         <div class="space-y-1">
                             <h3 class="text-sm font-bold text-green-700">3 Years Period</h3>
-                            <p class="text-xs font-semibold text-green-600/70 uppercase">1,080 Days</p>
+                            <p id="days3Years" class="text-xs font-semibold text-green-600/70 uppercase">--</p>
                             <div class="pt-2 border-t border-green-100 mt-2">
                                 <p class="text-[11px] text-gray-500 font-medium">Covers Upto:</p>
                                 <p id="cover3Years" class="text-lg font-bold text-green-900">--</p>
@@ -175,10 +198,17 @@
         function calculateDates() {
             const d = parseInt(document.getElementById('dayInput').value);
             const m = parseInt(document.getElementById('monthInput').value);
-            const y = parseInt(document.getElementById('yearInput').value);
+            const yStr = document.getElementById('yearInput').value;
+            const y = parseInt(yStr);
             const errorEl = document.getElementById('dateError');
             const resultsUI = document.getElementById('resultsUI');
             const copyBtn = document.getElementById('copyButton');
+
+            if (yStr.length < 4) {
+                resultsUI.classList.add('hidden');
+                copyBtn.disabled = true;
+                return;
+            }
 
             if (isNaN(d) || isNaN(m) || isNaN(y)) {
                 resultsUI.classList.add('hidden');
@@ -205,19 +235,38 @@
             end5.setDate(end5.getDate() - 1);
             document.getElementById('cover5Years').textContent = formatDisplayDate(end5);
 
+            const days5Years = Math.ceil((end5 - inputDate) / (1000 * 60 * 60 * 24));
+            const extra5 = days5Years - 1800;
+            document.getElementById('days5Years').innerHTML = `1,800 Days + <span class="opacity-60">${extra5} Days Extra</span>`;
+
             // 3 Years Calculation
             const end3 = new Date(inputDate);
             end3.setFullYear(inputDate.getFullYear() + 3);
             end3.setDate(end3.getDate() - 1);
             document.getElementById('cover3Years').textContent = formatDisplayDate(end3);
+
+            const days3Years = Math.ceil((end3 - inputDate) / (1000 * 60 * 60 * 24));
+            const extra3 = days3Years - 1080;
+            document.getElementById('days3Years').innerHTML = `1,080 Days + <span class="opacity-60">${extra3} Days Extra</span>`;
         }
 
         function copyResults() {
             const d = document.getElementById('dayInput').value.padStart(2, '0');
             const m = document.getElementById('monthInput').value.padStart(2, '0');
             const y = document.getElementById('yearInput').value;
-            
             const start = `${d}-${m}-${y}`;
+
+            const inputDate = new Date(y, m - 1, d);
+            const end5 = new Date(inputDate); end5.setFullYear(inputDate.getFullYear() + 5); end5.setDate(end5.getDate() - 1);
+            const days5 = Math.ceil((end5 - inputDate) / (1000 * 60 * 60 * 24));
+            const extra5 = days5 - 1800;
+            const days5Str = `1,800 Days + ${extra5} Days Extra`;
+
+            const end3 = new Date(inputDate); end3.setFullYear(inputDate.getFullYear() + 3); end3.setDate(end3.getDate() - 1);
+            const days3 = Math.ceil((end3 - inputDate) / (1000 * 60 * 60 * 24));
+            const extra3 = days3 - 1080;
+            const days3Str = `1,080 Days + ${extra3} Days Extra`;
+
             const cover5 = document.getElementById('cover5Years').textContent;
             const cover3 = document.getElementById('cover3Years').textContent;
 
@@ -225,12 +274,12 @@
 ${start}
 
 5 Years Period
-1,800 Days
+${days5Str}
 Covers Upto:
 ${cover5}
 
 3 Years Period
-1,080 Days
+${days3Str}
 Covers Upto:
 ${cover3}`;
             
